@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">RK2</string> <string name="gallery_title">Галерея изображений</string>
+    <string name="image_desc">Изображение</string>
+    <string name="image_number">Изображение №%d</string>
+    <string name="loading">Загрузка...</string>
+    <string name="error">Ошибка загрузки</string>
+    <string name="retry">Повторить</string>
+</resources>
