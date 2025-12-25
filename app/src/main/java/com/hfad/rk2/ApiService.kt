@@ -8,7 +8,7 @@ import retrofit2.http.Query
 interface ApiService {
     @GET("gifs/trending")
     suspend fun getGifs(
-        @Query("api_key") apiKey: String = "2npruBB1CXrXu5RrFruLA7DrFrwzyiys",
+        @Query("api_key") apiKey: String = "6jMa9v9V4TII6XzKEbgErZLyfJ7cg6MQ",
         @Query("limit") limit: Int = 10,
         @Query("offset") offset: Int = 0
     ): GiphyResponse

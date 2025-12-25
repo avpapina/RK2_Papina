@@ -1,7 +1,6 @@
 package com.hfad.rk2
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,18 +11,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -52,28 +53,70 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ImageScreen(viewModel: ImageViewModel){
+fun ImageScreen(viewModel: ImageViewModel) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
-    when(state){
+    val isNearBottom by remember {
+        derivedStateOf {
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+            lastVisibleItem?.index == listState.layoutInfo.totalItemsCount - 1
+        }
+    }
+
+    LaunchedEffect(isNearBottom) {
+        if (isNearBottom && state is ImageState.Success) {
+            val currentState = state as ImageState.Success
+            if (!currentState.isLoadingNextPage) {
+                viewModel.loadNextPage()
+            }
+        }
+    }
+
+    when (state) {
         is ImageState.Loading -> {
-            LoadingScreen()
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         }
 
         is ImageState.Error -> {
-            val  error = (state as ImageState.Error).message
-            ErrorScreen(error = error, onRetry =  { viewModel.loadImages()})
+            val error = (state as ImageState.Error).message
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.error),
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = error,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+                Button(onClick = { viewModel.loadImages() }) {
+                    Text(stringResource(R.string.retry))
+                }
+            }
         }
 
         is ImageState.Success -> {
-            val images = (state as ImageState.Success).images
+            val stateSuccess = state as ImageState.Success
+            val images = stateSuccess.images
 
-            LazyColumn (
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 16.dp)
-            ){
+                    .padding(top = 16.dp),
+                state = listState
+            ) {
                 item {
                     Text(
                         text = stringResource(R.string.gallery_title),
@@ -84,46 +127,57 @@ fun ImageScreen(viewModel: ImageViewModel){
                     )
                 }
 
-                items (images) { image ->
+                items(images) { image ->
                     val imageNumber = images.indexOf(image) + 1
                     ImageCard(
                         imageUrl = image.images.fixed_width.url,
                         imageNumber = imageNumber,
                         onClick = {
-                            Toast.makeText(
+                            android.widget.Toast.makeText(
                                 context,
-                                "Изображение №${imageNumber}",
-                                //stringResource(R.string.image_number, image.imageNumber),
-                                Toast.LENGTH_SHORT
+                                "Изображение №$imageNumber",
+                                android.widget.Toast.LENGTH_SHORT
                             ).show()
                         }
                     )
                 }
-            }
 
+                if (stateSuccess.isLoadingNextPage) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun  LoadingScreen(){
+fun LoadingScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
-    ){
+    ) {
         CircularProgressIndicator()
     }
 }
 
 @Composable
-fun ErrorScreen(error: String, onRetry: () -> Unit){
-    Column (
+fun ErrorScreen(error: String, onRetry: () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
-    ){
+    ) {
         Text(
             text = stringResource(R.string.error),
             style = MaterialTheme.typography.headlineMedium
